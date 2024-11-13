@@ -6,20 +6,20 @@ from django.utils import timezone
 from Client.models import Client
 from django.urls import reverse
 
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
 
 
 def produit_list(request):
-    template = loader.get_template('DisplayProduit.html')
-    produits = Produit.objects.all().values()  # Query all Produit objects
-    commandes = Commande.objects.all().values()
+    template = loader.get_template('shoping-cart.html')
+    produits = Produit.objects.all()  # Query all Produit objects
+    commandes = Commande.objects.select_related('produit_commande')  # Query Commande objects with related Produit
+
     context = {
         'produits': produits,
-        'commandes': commandes
+        'commandes': commandes,
     }
     return HttpResponse(template.render(context, request))
-
-from django.shortcuts import redirect, get_object_or_404
-
 
 def click_button_add_to_commande(request):
     if request.method == 'POST':
@@ -77,3 +77,18 @@ def edit_commande(request, commande_id):
         form = CommandeForm(instance=commande)
 
     return render(request, 'edit_commande.html', {'form': form})
+
+def update_quantity(request, commande_id):
+    if request.method == 'POST':
+        # Get the new quantity from the request
+        data = json.loads(request.body)
+        new_quantity = data.get('quantity')
+
+        # Get the commande object and update the quantity
+        commande = Commande.objects.get(id=commande_id)
+        commande.quantite_commande = new_quantity
+        commande.save()
+
+        return JsonResponse({'success': True})
+
+    return JsonResponse({'success': False}, status=400)
